@@ -110,7 +110,7 @@ private:
     int parent_pos = extract_node(left_pos).parent;
     Node parent = extract_node(parent_pos);
     int i = parent.size;
-    while (i > 0 && parent.keys[i - 1].first > kv.first) {
+    while (i > 0 && parent.keys[i - 1] > kv) {
       parent.keys[i] = parent.keys[i - 1];
       parent.children[i + 1] = parent.children[i];
       --i;
