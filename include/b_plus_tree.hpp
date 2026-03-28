@@ -132,7 +132,9 @@ private:
     int mid = order / 2;
     for (int i = mid + 1; i < order; ++i) {
       new_internal.keys[i - mid - 1] = internal.keys[i];
-      new_internal.children[i - mid] = internal.children[i];
+    }
+    for (int i = mid + 1; i <= order; ++i) {
+      new_internal.children[i - mid - 1] = internal.children[i];
     }
     new_internal.size = order - mid - 1;
     internal.size = mid;
@@ -150,14 +152,10 @@ private:
   void fix_leaf(int leaf_pos) {
     Node leaf = extract_node(leaf_pos);
     if (leaf.size >= (order + 1) / 2) return;
-    if (leaf.parent == -1) {
-      // Root leaf is allowed to be empty; keep root position valid.
-      return;
-    }
     int parent_pos = leaf.parent;
     Node parent = extract_node(parent_pos);
     int idx = 0;
-    while (idx <= parent.size && parent.children[idx] != leaf_pos) ++idx;
+    while (parent.children[idx] != leaf_pos) ++idx;
 
     if (idx > 0) {
       Node left_sibling = extract_node(parent.children[idx - 1]);
@@ -168,7 +166,7 @@ private:
         leaf.keys[0] = left_sibling.keys[left_sibling.size - 1];
         ++leaf.size;
         --left_sibling.size;
-        parent.keys[idx - 1] = left_sibling.keys[left_sibling.size - 1];
+        parent.keys[idx - 1] = leaf.keys[0];
         write_node(left_sibling, parent.children[idx - 1]);
         write_node(leaf, leaf_pos);
         write_node(parent, parent_pos);
@@ -187,22 +185,6 @@ private:
         --right_sibling.size;
         parent.keys[idx] = right_sibling.keys[0];
         write_node(right_sibling, parent.children[idx + 1]);
-        write_node(leaf, leaf_pos);
-        write_node(parent, parent_pos);
-        return;
-      }
-    }
-    if (idx > 0) {
-      Node left_sibling = extract_node(parent.children[idx - 1]);
-      if (left_sibling.size > (order + 1) / 2) {
-        for (int i = leaf.size; i > 0; --i) {
-          leaf.keys[i] = leaf.keys[i - 1];
-        }
-        leaf.keys[0] = left_sibling.keys[left_sibling.size - 1];
-        ++leaf.size;
-        --left_sibling.size;
-        parent.keys[idx - 1] = left_sibling.keys[left_sibling.size - 1];
-        write_node(left_sibling, parent.children[idx - 1]);
         write_node(leaf, leaf_pos);
         write_node(parent, parent_pos);
         return;
