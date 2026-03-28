@@ -46,13 +46,13 @@ private:
     return node_pool.write(node);
   }
 
-  int find_leaf(const Key &key) {
+  int find_leaf(const value_type &key) {
     int pos = extract_root();
     while (true) {
       Node node = extract_node(pos);
       if (node.is_leaf) return pos;
       int i = 0;
-      while (i < node.size && key >= node.keys[i].first) ++i;
+      while (i < node.size && key >= node.keys[i]) ++i;
       pos = node.children[i];
     }
   }
@@ -348,8 +348,8 @@ public:
   ~b_plus_tree() = default;
 
   void insert(const Key &key, const T &value) {
-    int leaf_pos = find_leaf(key);
     value_type kv(key, value);
+    int leaf_pos = find_leaf(kv);
     Node leaf = extract_node(leaf_pos);
     for (int i = 0; i < leaf.size; ++i) {
       if (leaf.keys[i] == kv) {
@@ -360,8 +360,8 @@ public:
   }
 
   void erase(const Key &key, const T &value) {
-    int leaf_pos = find_leaf(key);
     value_type kv(key, value);
+    int leaf_pos = find_leaf(kv);
     Node leaf = extract_node(leaf_pos);
     int i = 0;
     while (i < leaf.size && leaf.keys[i] != kv) ++i;
@@ -375,7 +375,8 @@ public:
   }
 
   sjtu::vector<T> find(const Key &key) {
-    int leaf_pos = find_leaf(key);
+    value_type kv(key, std::numeric_limits<T>::min());
+    int leaf_pos = find_leaf(kv);
     sjtu::vector<T> result;
     while (leaf_pos != -1) {
       Node leaf = extract_node(leaf_pos);

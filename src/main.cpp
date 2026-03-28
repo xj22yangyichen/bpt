@@ -15,7 +15,7 @@ int main() {
         if (command == "insert") {
             std::cin >> ind >> val;
             tree.insert(my_string(ind), val);
-        } else if (command == "erase" || command == "delete") {
+        } else if (command == "delete") {
             std::cin >> ind >> val;
             tree.erase(my_string(ind), val);
         } else if (command == "find") {
@@ -26,8 +26,7 @@ int main() {
                 continue;
             }
             for (size_t i = 0; i < result.size(); ++i) {
-                if (i) std::cout << ' ';
-                std::cout << result[i];
+                std::cout << result[i] << ' ';
             }
             std::cout << '\n';
         }

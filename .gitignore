@@ -3,3 +3,4 @@ build/
 data/
 example/
 README.md
+src/self_check.cpp
