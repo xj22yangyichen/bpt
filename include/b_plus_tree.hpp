@@ -218,7 +218,8 @@ private:
     
     if (parent.parent != -1 && parent.size < (order + 1) / 2) {
       fix_internal(left.parent);
-    } else if (parent.size == 0) {
+    }
+    if (parent.size == 0 && parent.parent == -1) {
       write_root(left_pos);
       left.parent = -1;
       write_node(left, left_pos);
@@ -227,19 +228,16 @@ private:
 
   void fix_internal(int internal_pos) {
     Node internal = extract_node(internal_pos);
-    if (internal.size >= (order + 1) / 2) return;
-    if (internal.parent == -1) {
-      if (internal.size == 0) write_root(internal.children[0]);
-      return;
-    }
+    if (internal.parent == -1 || internal.size >= (order - 1) / 2) return;
+
     int parent_pos = internal.parent;
     Node parent = extract_node(parent_pos);
     int idx = 0;
-    while (idx <= parent.size && parent.children[idx] != internal_pos) ++idx;
+    while (parent.children[idx] != internal_pos) ++idx;
 
     if (idx > 0) {
       Node left_sibling = extract_node(parent.children[idx - 1]);
-      if (left_sibling.size > (order + 1) / 2) {
+      if (left_sibling.size > (order - 1) / 2) {
         for (int i = internal.size; i > 0; --i) {
           internal.keys[i] = internal.keys[i - 1];
         }
@@ -248,9 +246,13 @@ private:
         }
         internal.keys[0] = parent.keys[idx - 1];
         internal.children[0] = left_sibling.children[left_sibling.size];
+        Node child = extract_node(internal.children[0]);
+        child.parent = internal_pos;
+        write_node(child, internal.children[0]);
+        // 
+        parent.keys[idx - 1] = left_sibling.keys[left_sibling.size - 1];
         ++internal.size;
         --left_sibling.size;
-        parent.keys[idx - 1] = left_sibling.keys[left_sibling.size - 1];
         write_node(left_sibling, parent.children[idx - 1]);
         write_node(internal, internal_pos);
         write_node(parent, parent_pos);
@@ -260,17 +262,21 @@ private:
 
     if (idx < parent.size) {
       Node right_sibling = extract_node(parent.children[idx + 1]);
-      if (right_sibling.size > (order + 1) / 2) {
+      if (right_sibling.size > (order - 1) / 2) {
         internal.keys[internal.size] = parent.keys[idx];
         internal.children[internal.size + 1] = right_sibling.children[0];
-        ++internal.size;
+        Node child = extract_node(internal.children[internal.size + 1]);
+        child.parent = internal_pos;
+        write_node(child, internal.children[internal.size + 1]);
+        parent.keys[idx] = right_sibling.keys[0];
         for (int i = 0; i < right_sibling.size - 1; ++i) {
           right_sibling.keys[i] = right_sibling.keys[i + 1];
+        }
+        for (int i = 0; i < right_sibling.size; ++i) {
           right_sibling.children[i] = right_sibling.children[i + 1];
         }
-        right_sibling.children[right_sibling.size - 1] = right_sibling.children[right_sibling.size];
+        ++internal.size;
         --right_sibling.size;
-        parent.keys[idx] = right_sibling.keys[0];
         write_node(right_sibling, parent.children[idx + 1]);
         write_node(internal, internal_pos);
         write_node(parent, parent_pos);
