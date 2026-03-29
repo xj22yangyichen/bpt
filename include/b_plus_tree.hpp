@@ -1,8 +1,6 @@
 #ifndef B_PLUS_TREE_HPP
 #define B_PLUS_TREE_HPP
 
-#include <limits>
-
 #include "utility.hpp"
 #include "memory_river.hpp"
 
@@ -13,6 +11,7 @@ class b_plus_tree {
 public:
   typedef sjtu::pair<Key, T> value_type;
 private:
+  static constexpr int NODE_CACHE_SIZE = 257;
   struct Node {
     bool is_leaf;
     int size;
@@ -24,28 +23,56 @@ private:
     Node(bool is_leaf) : is_leaf(is_leaf), size(0), parent(-1), next(-1) {}
   };
 
+  struct CacheSlot {
+    bool valid;
+    int pos;
+    Node node;
+    CacheSlot() : valid(false), pos(-1), node() {}
+  };
+
   MemoryRiver<Node> node_pool;
+  int root_pos;
+  CacheSlot node_cache[NODE_CACHE_SIZE];
+
+  int cache_index(int pos) const {
+    int x = pos % NODE_CACHE_SIZE;
+    return x < 0 ? x + NODE_CACHE_SIZE : x;
+  }
+
+  void cache_put(int pos, const Node &node) {
+    int idx = cache_index(pos);
+    node_cache[idx].valid = true;
+    node_cache[idx].pos = pos;
+    node_cache[idx].node = node;
+  }
 
   Node extract_node(int pos) {
+    int idx = cache_index(pos);
+    if (node_cache[idx].valid && node_cache[idx].pos == pos) {
+      return node_cache[idx].node;
+    }
     Node node;
     node_pool.read(node, pos);
+    cache_put(pos, node);
     return node;
   }
   void write_node(const Node &node, int pos) {
     node_pool.update(node, pos);
+    cache_put(pos, node);
   }
 
   int extract_root() {
-    int root_pos;
-    node_pool.get_info(root_pos, 1);
     return root_pos;
   }
   void write_root(int root_pos) {
+    this->root_pos = root_pos;
     node_pool.write_info(root_pos, 1);
   }
 
   int create_node(const Node &node) {
-    return node_pool.write(node);
+    int pos = node_pool.write(node);
+    cache_put(pos, node);
+    return pos;
   }
 
   int find_leaf(const value_type &key) {
@@ -55,6 +82,17 @@ private:
       if (node.is_leaf) return pos;
       int i = 0;
       while (i < node.size && key >= node.keys[i]) ++i;
+      pos = node.children[i];
+    }
+  }
+
+  int find_leaf_by_key(const Key &key) {
+    int pos = extract_root();
+    while (true) {
+      Node node = extract_node(pos);
+      if (node.is_leaf) return pos;
+      int i = 0;
+      while (i < node.size && key > node.keys[i].first) ++i;
       pos = node.children[i];
     }
   }
@@ -330,12 +368,14 @@ private:
   }
 
 public:
-  b_plus_tree(std::string filename = "b_plus_tree.dat") : node_pool(filename) {
+  b_plus_tree(std::string filename = "b_plus_tree.dat") : node_pool(filename), root_pos(-1) {
     node_pool.initialise(filename);
     if (node_pool.size() == 0) {
       Node root(true);
       int root_pos = create_node(root);
       write_root(root_pos);
+    } else {
+      node_pool.get_info(root_pos, 1);
     }
   }
 
@@ -371,8 +411,7 @@ public:
   }
 
   sjtu::vector<T> find(const Key &key) {
-    value_type kv(key, std::numeric_limits<T>::min());
-    int leaf_pos = find_leaf(kv);
+    int leaf_pos = find_leaf_by_key(key);
     sjtu::vector<T> result;
     while (leaf_pos != -1) {
       Node leaf = extract_node(leaf_pos);
