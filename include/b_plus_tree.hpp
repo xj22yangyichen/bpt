@@ -361,7 +361,9 @@ public:
     }
     --leaf.size;
     write_node(leaf, leaf_pos);
-    fix_leaf(leaf_pos);
+    if (leaf_pos != extract_root() && leaf.size < (order + 1) / 2) {
+      fix_leaf(leaf_pos);
+    }
   }
 
   sjtu::vector<T> find(const Key &key) {
