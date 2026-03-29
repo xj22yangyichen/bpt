@@ -151,7 +151,6 @@ private:
 
   void fix_leaf(int leaf_pos) {
     Node leaf = extract_node(leaf_pos);
-    if (leaf.size >= (order + 1) / 2) return;
     int parent_pos = leaf.parent;
     Node parent = extract_node(parent_pos);
     int idx = 0;
@@ -219,7 +218,7 @@ private:
     if (parent.parent != -1 && parent.size < (order + 1) / 2) {
       fix_internal(left.parent);
     }
-    if (parent.size == 0 && parent.parent == -1) {
+    if (parent.size == 0 && left.parent == extract_root()) {
       write_root(left_pos);
       left.parent = -1;
       write_node(left, left_pos);
