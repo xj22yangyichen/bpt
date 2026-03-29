@@ -1,6 +1,8 @@
 #ifndef B_PLUS_TREE_HPP
 #define B_PLUS_TREE_HPP
 
+#include <limits>
+
 #include "utility.hpp"
 #include "memory_river.hpp"
 
@@ -151,14 +153,16 @@ private:
 
   void fix_leaf(int leaf_pos) {
     Node leaf = extract_node(leaf_pos);
+    if (leaf.parent == -1) return;
     int parent_pos = leaf.parent;
     Node parent = extract_node(parent_pos);
     int idx = 0;
-    while (parent.children[idx] != leaf_pos) ++idx;
+    while (idx <= parent.size && parent.children[idx] != leaf_pos) ++idx;
+    if (idx > parent.size) return;
 
     if (idx > 0) {
       Node left_sibling = extract_node(parent.children[idx - 1]);
-      if (left_sibling.size > (order + 1) / 2) {
+      if (left_sibling.size > 1) {
         for (int i = leaf.size; i > 0; --i) {
           leaf.keys[i] = leaf.keys[i - 1];
         }
@@ -175,7 +179,7 @@ private:
 
     if (idx < parent.size) {
       Node right_sibling = extract_node(parent.children[idx + 1]);
-      if (right_sibling.size > (order + 1) / 2) {
+      if (right_sibling.size > 1) {
         leaf.keys[leaf.size] = right_sibling.keys[0];
         ++leaf.size;
         for (int i = 0; i < right_sibling.size - 1; ++i) {
@@ -215,7 +219,7 @@ private:
     write_node(parent, left.parent);
     write_node(left, left_pos);
     
-    if (parent.parent != -1 && parent.size < (order + 1) / 2) {
+    if (parent.parent != -1 && parent.size == 0) {
       fix_internal(left.parent);
     }
     if (parent.size == 0 && left.parent == extract_root()) {
@@ -227,16 +231,17 @@ private:
 
   void fix_internal(int internal_pos) {
     Node internal = extract_node(internal_pos);
-    if (internal.parent == -1 || internal.size >= (order - 1) / 2) return;
+    if (internal.parent == -1 || internal.size > 0) return;
 
     int parent_pos = internal.parent;
     Node parent = extract_node(parent_pos);
     int idx = 0;
-    while (parent.children[idx] != internal_pos) ++idx;
+    while (idx <= parent.size && parent.children[idx] != internal_pos) ++idx;
+    if (idx > parent.size) return;
 
     if (idx > 0) {
       Node left_sibling = extract_node(parent.children[idx - 1]);
-      if (left_sibling.size > (order - 1) / 2) {
+      if (left_sibling.size > 1) {
         for (int i = internal.size; i > 0; --i) {
           internal.keys[i] = internal.keys[i - 1];
         }
@@ -248,7 +253,6 @@ private:
         Node child = extract_node(internal.children[0]);
         child.parent = internal_pos;
         write_node(child, internal.children[0]);
-        // 
         parent.keys[idx - 1] = left_sibling.keys[left_sibling.size - 1];
         ++internal.size;
         --left_sibling.size;
@@ -261,7 +265,7 @@ private:
 
     if (idx < parent.size) {
       Node right_sibling = extract_node(parent.children[idx + 1]);
-      if (right_sibling.size > (order - 1) / 2) {
+      if (right_sibling.size > 1) {
         internal.keys[internal.size] = parent.keys[idx];
         internal.children[internal.size + 1] = right_sibling.children[0];
         Node child = extract_node(internal.children[internal.size + 1]);
@@ -320,7 +324,7 @@ private:
       write_node(left, left_pos);
       return;
     }
-    if (parent.parent != -1 && parent.size < (order - 1) / 2) {
+    if (parent.parent != -1 && parent.size == 0) {
       fix_internal(left.parent);
     }
   }
@@ -361,7 +365,7 @@ public:
     }
     --leaf.size;
     write_node(leaf, leaf_pos);
-    if (leaf_pos != extract_root() && leaf.size < (order + 1) / 2) {
+    if (leaf_pos != extract_root() && leaf.size == 0) {
       fix_leaf(leaf_pos);
     }
   }
